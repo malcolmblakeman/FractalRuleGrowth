@@ -1100,76 +1100,76 @@ def main_page():
         }
         </style>
         """, unsafe_allow_html=True)
-        #st.markdown('<div class="gif-container">', unsafe_allow_html=True)
+        st.markdown('<div class="gif-container">', unsafe_allow_html=True)
         st.image(st.session_state.last_gif_path, use_container_width=True)
-        #st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
-        st.subheader("Smooth Viewer (No Lag)")
-        frames = []
-        gif = Image.open(st.session_state.last_gif_path)
+        # st.subheader("Smooth Viewer (No Lag)")
+        # frames = []
+        # gif = Image.open(st.session_state.last_gif_path)
 
-        # Extract all frames
-        frames = [
-            frame.copy().convert("RGBA")
-            for frame in ImageSequence.Iterator(gif)
-        ]
+        # # Extract all frames
+        # frames = [
+        #     frame.copy().convert("RGBA")
+        #     for frame in ImageSequence.Iterator(gif)
+        # ]
 
-        # Get GIF FPS from frame duration
-        duration = gif.info.get("duration", 50)  # milliseconds per frame
-        fps = 1000 / duration if duration > 0 else 50
+        # # Get GIF FPS from frame duration
+        # duration = gif.info.get("duration", 50)  # milliseconds per frame
+        # fps = 1000 / duration if duration > 0 else 50
 
-        # encode frames as base64 PNG list
-        encoded_frames = []
-        for f in frames:
-            buf = io.BytesIO()
-            f.save(buf, format="WEBP", lossless=True)
-            encoded_frames.append(
-                base64.b64encode(buf.getvalue()).decode()
-            )
+        # # encode frames as base64 PNG list
+        # encoded_frames = []
+        # for f in frames:
+        #     buf = io.BytesIO()
+        #     f.save(buf, format="WEBP", lossless=True)
+        #     encoded_frames.append(
+        #         base64.b64encode(buf.getvalue()).decode()
+        #     )
 
-        html = f"""
-        <div style="text-align:center;">
-            <img id="frame" style="width:100%; max-width:500px;">
+        # html = f"""
+        # <div style="text-align:center;">
+        #     <img id="frame" style="width:100%; max-width:500px;">
 
-            <br><br>
+        #     <br><br>
 
-            <input type="range" min="0" max="{len(encoded_frames)-1}"
-                value="0" id="slider" style="width:500px;"/>
+        #     <input type="range" min="0" max="{len(encoded_frames)-1}"
+        #         value="0" id="slider" style="width:500px;"/>
 
-            <button onclick="playing = !playing;">Play/Pause</button>
-        </div>
+        #     <button onclick="playing = !playing;">Play/Pause</button>
+        # </div>
 
-        <script>
-            let frames = {encoded_frames};
-            let i = 0;
-            let playing = false;
+        # <script>
+        #     let frames = {encoded_frames};
+        #     let i = 0;
+        #     let playing = false;
 
-            const img = document.getElementById("frame");
-            const slider = document.getElementById("slider");
+        #     const img = document.getElementById("frame");
+        #     const slider = document.getElementById("slider");
 
-            function render(idx) {{
-                img.src = "data:image/webp;base64," + frames[idx];
-            }}
+        #     function render(idx) {{
+        #         img.src = "data:image/webp;base64," + frames[idx];
+        #     }}
 
-            slider.oninput = (e) => {{
-                i = parseInt(e.target.value);
-                render(i);
-            }}
+        #     slider.oninput = (e) => {{
+        #         i = parseInt(e.target.value);
+        #         render(i);
+        #     }}
 
-            function loop() {{
-                if (playing) {{
-                    i = (i + 1) % frames.length;
-                    slider.value = i;
-                    render(i);
-                }}
-            }}
+        #     function loop() {{
+        #         if (playing) {{
+        #             i = (i + 1) % frames.length;
+        #             slider.value = i;
+        #             render(i);
+        #         }}
+        #     }}
 
-            setInterval(loop, {50});
-            render(0);
-        </script>
-        """
+        #     setInterval(loop, {50});
+        #     render(0);
+        # </script>
+        # """
 
-        st.components.v1.html(html, height=650)
+        # st.components.v1.html(html, height=650)
 
     elif st.session_state.last_gif_path is None:
         st.info("Generate a pattern first, then create an animation")
