@@ -1,6 +1,3 @@
-```markdown
-<div align="center">
-
 # 🔺✨ Pattern Forge
 
 ### Geometric Pattern Generator from Color Substitution Rules
@@ -16,7 +13,6 @@
 
 [🚀 Try it Live](https://your-app.streamlit.app) · [📖 How It Works](#-how-it-works) · [🎨 Gallery](#-gallery)
 
-</div>
 
 ---
 
@@ -122,7 +118,7 @@ pip install streamlit pillow
 
 # Run!
 streamlit run app.py
-```
+
 
 That's it. No complex build steps.
 
