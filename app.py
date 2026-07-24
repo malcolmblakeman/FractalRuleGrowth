@@ -28,6 +28,10 @@ SHAPE_ICONS = {
     "Octagon": "🛑",
     "Square": "⬜",
     "Hexagon": "⬣",
+    "Quadagon": "🔳",
+    "Pentagon": "⬟",
+    "Trigon": "⟁"
+
 }
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -359,6 +363,192 @@ def make_pattern_octagon(rows, colors=None, rainbow=False):
 
     return canvas
 
+def make_pattern_sq(rows, colors=None, rainbow=False):
+    tri = draw_triangle(rows, colors=colors, rainbow=rainbow)
+
+    tri = tri.resize(
+        (int(round(tri.width * 2)), tri.height),
+        Image.Resampling.LANCZOS,
+    )
+
+    W, H = tri.size
+    angles = [0, 90, 180, 270]
+    images = [tri.rotate(angle, expand=True) for angle in angles]
+
+    # where is the peak inside each rotated image?
+    peaks = []
+    for img, ang in zip(images, angles):
+        # vector from original center to peak in original image
+        # peak = (W/2, 0), center = (W/2, H/2) -> (0, -H/2) in screen coords
+        vx_down, vy_down = 0, -H/2
+
+        # rotate in math coords (y up) to match PIL's CCW
+        vx_up = vx_down
+        vy_up = -vy_down
+        rad = math.radians(ang)
+        rvx_up = vx_up * math.cos(rad) - vy_up * math.sin(rad)
+        rvy_up = vx_up * math.sin(rad) + vy_up * math.cos(rad)
+        rvx_down = rvx_up
+        rvy_down = -rvy_up
+
+        # original center -> new center after expand=True
+        peak_x = img.width / 2 + rvx_down
+        peak_y = img.height / 2 + rvy_down
+        peaks.append((peak_x, peak_y))
+
+    # bounds if all peaks were at (0,0)
+    lefts = [-px for px, _ in peaks]
+    tops = [-py for _, py in peaks]
+    rights = [img.width - px for img, (px, _) in zip(images, peaks)]
+    bottoms = [img.height - py for img, (_, py) in zip(images, peaks)]
+
+    min_x, min_y = min(lefts), min(tops)
+    max_x, max_y = max(rights), max(bottoms)
+
+    canvas_w = int(math.ceil(max_x - min_x))
+    canvas_h = int(math.ceil(max_y - min_y))
+
+    canvas = Image.new("RGBA", (canvas_w, canvas_h), (0, 0, 0, 0))
+
+    # this point in canvas is where all peaks meet
+    peak_canvas_x = -min_x
+    peak_canvas_y = -min_y
+
+    for img, (px, py) in zip(images, peaks):
+        x = int(round(peak_canvas_x - px))
+        y = int(round(peak_canvas_y - py))
+        canvas.alpha_composite(img, (x, y))
+    
+    bbox = canvas.getbbox()   # bounding box of non-transparent pixels
+    if bbox:
+        canvas = canvas.crop(bbox)
+
+    return canvas
+
+def make_pattern_pent(rows, colors=None, rainbow=False):
+    tri = draw_triangle(rows, colors=colors, rainbow=rainbow)
+
+    tri = tri.resize(
+        (int(round(tri.width * math.sqrt(5)*2/3)), tri.height),
+        Image.Resampling.LANCZOS,
+    )
+
+    W, H = tri.size
+    angles = [0, 72, 144, 216, 288]
+    images = [tri.rotate(angle, expand=True) for angle in angles]
+
+    # where is the peak inside each rotated image?
+    peaks = []
+    for img, ang in zip(images, angles):
+        # vector from original center to peak in original image
+        # peak = (W/2, 0), center = (W/2, H/2) -> (0, -H/2) in screen coords
+        vx_down, vy_down = 0, -H/2
+
+        # rotate in math coords (y up) to match PIL's CCW
+        vx_up = vx_down
+        vy_up = -vy_down
+        rad = math.radians(ang)
+        rvx_up = vx_up * math.cos(rad) - vy_up * math.sin(rad)
+        rvy_up = vx_up * math.sin(rad) + vy_up * math.cos(rad)
+        rvx_down = rvx_up
+        rvy_down = -rvy_up
+
+        # original center -> new center after expand=True
+        peak_x = img.width / 2 + rvx_down
+        peak_y = img.height / 2 + rvy_down
+        peaks.append((peak_x, peak_y))
+
+    # bounds if all peaks were at (0,0)
+    lefts = [-px for px, _ in peaks]
+    tops = [-py for _, py in peaks]
+    rights = [img.width - px for img, (px, _) in zip(images, peaks)]
+    bottoms = [img.height - py for img, (_, py) in zip(images, peaks)]
+
+    min_x, min_y = min(lefts), min(tops)
+    max_x, max_y = max(rights), max(bottoms)
+
+    canvas_w = int(math.ceil(max_x - min_x))
+    canvas_h = int(math.ceil(max_y - min_y))
+
+    canvas = Image.new("RGBA", (canvas_w, canvas_h), (0, 0, 0, 0))
+
+    # this point in canvas is where all peaks meet
+    peak_canvas_x = -min_x
+    peak_canvas_y = -min_y
+
+    for img, (px, py) in zip(images, peaks):
+        x = int(round(peak_canvas_x - px))
+        y = int(round(peak_canvas_y - py))
+        canvas.alpha_composite(img, (x, y))
+    
+    bbox = canvas.getbbox()   # bounding box of non-transparent pixels
+    if bbox:
+        canvas = canvas.crop(bbox)
+
+    return canvas
+
+def make_pattern_tri(rows, colors=None, rainbow=False):
+    tri = draw_triangle(rows, colors=colors, rainbow=rainbow)
+
+    tri = tri.resize(
+        (int(round(tri.width * 2*math.sqrt(3))), tri.height),
+        Image.Resampling.LANCZOS,
+    )
+
+    W, H = tri.size
+    angles = [0, 120, -120]
+    images = [tri, tri.rotate(120, expand=True), tri.rotate(-120, expand=True)]
+
+    # where is the peak inside each rotated image?
+    peaks = []
+    for img, ang in zip(images, angles):
+        # vector from original center to peak in original image
+        # peak = (W/2, 0), center = (W/2, H/2) -> (0, -H/2) in screen coords
+        vx_down, vy_down = 0, -H/2
+
+        # rotate in math coords (y up) to match PIL's CCW
+        vx_up = vx_down
+        vy_up = -vy_down
+        rad = math.radians(ang)
+        rvx_up = vx_up * math.cos(rad) - vy_up * math.sin(rad)
+        rvy_up = vx_up * math.sin(rad) + vy_up * math.cos(rad)
+        rvx_down = rvx_up
+        rvy_down = -rvy_up
+
+        # original center -> new center after expand=True
+        peak_x = img.width / 2 + rvx_down
+        peak_y = img.height / 2 + rvy_down
+        peaks.append((peak_x, peak_y))
+
+    # bounds if all peaks were at (0,0)
+    lefts = [-px for px, _ in peaks]
+    tops = [-py for _, py in peaks]
+    rights = [img.width - px for img, (px, _) in zip(images, peaks)]
+    bottoms = [img.height - py for img, (_, py) in zip(images, peaks)]
+
+    min_x, min_y = min(lefts), min(tops)
+    max_x, max_y = max(rights), max(bottoms)
+
+    canvas_w = int(math.ceil(max_x - min_x))
+    canvas_h = int(math.ceil(max_y - min_y))
+
+    canvas = Image.new("RGBA", (canvas_w, canvas_h), (0, 0, 0, 0))
+
+    # this point in canvas is where all peaks meet
+    peak_canvas_x = -min_x
+    peak_canvas_y = -min_y
+
+    for img, (px, py) in zip(images, peaks):
+        x = int(round(peak_canvas_x - px))
+        y = int(round(peak_canvas_y - py))
+        canvas.alpha_composite(img, (x, y))
+    
+    bbox = canvas.getbbox()   # bounding box of non-transparent pixels
+    if bbox:
+        canvas = canvas.crop(bbox)
+
+    return canvas
+
 
 def draw_square(rows, colors=None, rainbow=False, cell=CELL, margin=MARGIN):
     if colors is None:
@@ -449,7 +639,7 @@ def animate_gif_tri(rule, colors=None, boundary=1, random_scale=0, wait_until=0,
         canvas = Image.new("RGBA", (final_w, final_h), (0, 0, 0, 0))
         canvas.alpha_composite(img, ((final_w - img.width) // 2, 0))
         if zoomout:
-            img = img.resize((final_w, final_h), Image.Resampling.NEAREST)
+            img = img.resize((final_w, final_h), Image.Resampling.LANCZOS)
             canvas = img
         frames.append(canvas.convert("P", palette=Image.ADAPTIVE))
     durations = [duration] * len(frames)
@@ -471,10 +661,10 @@ def animate_gif_oct(rule, colors=None, boundary=1, random_scale=0, wait_until=0,
         canvas = Image.new("RGBA", (final_w, final_h), (0, 0, 0, 0))
         canvas.alpha_composite(img, ((final_w - img.width) // 2, (final_h - img.height) // 2))
         if zoomout:
-            img = img.resize((final_w, final_h), Image.Resampling.NEAREST)
+            img = img.resize((final_w, final_h), Image.Resampling.LANCZOS)
             canvas = img
         if angdur > 0:
-            frame_idx = n - start_rows
+            frame_idx = n - (start_rows-1)
             canvas = canvas.rotate((180.0 / angdur) * frame_idx, expand=False)
         frames.append(canvas.convert("P", palette=Image.ADAPTIVE))
     durations = [duration] * len(frames)
@@ -494,7 +684,7 @@ def animate_gif_sq(rule, colors=None, boundary=1, random_scale=0, wait_until=0, 
     for n in range(start_rows, end_rows + 1):
         img = draw_square(his[n - 1], colors=colors, rainbow=rainbow)
         if zoomout:
-            img = img.resize((final_w, final_h), Image.Resampling.NEAREST)
+            img = img.resize((final_w, final_h), Image.Resampling.LANCZOS)
             canvas = img
         else:
             canvas = Image.new("RGBA", (final_w, final_h), (0, 0, 0, 0))
@@ -520,7 +710,7 @@ def animate_gif_hex(rule, colors=None, boundary=0, order=-1, random_scale=0, wai
         partial = dict(items[:count])
         img = draw_hex(partial, colors=colors, rainbow=rainbow)
         if zoomout:
-            img = img.resize((final_w, final_h), Image.Resampling.NEAREST)
+            img = img.resize((final_w, final_h), Image.Resampling.LANCZOS)
             canvas = img
         else:
             canvas = Image.new("RGBA", (final_w, final_h), (0, 0, 0, 0))
@@ -530,6 +720,80 @@ def animate_gif_hex(rule, colors=None, boundary=0, order=-1, random_scale=0, wai
     durations[-1] = 500
     frames[0].save(filename, save_all=True, append_images=frames[1:], duration=durations, loop=loop, optimize=False, disposal=2)
     return filename
+
+def animate_gif_pattern(
+    rule,
+    colors=None,
+    pattern_func=draw_triangle,
+    boundary=1,
+    random_scale=0,
+    wait_until=0,
+    sym=False,
+    rainbow=False,
+    filename="pattern.gif",
+    start_rows=1,
+    end_rows=50,
+    duration=50,
+    loop=0,
+    zoomout=False,
+    angdur=0,
+):
+    rows = generate_triangle(
+        rule,
+        num_lines=end_rows,
+        boundary=boundary,
+        random_scale=random_scale,
+        wait_until=wait_until,
+        sym=sym,
+    )
+
+    final_img = pattern_func(rows[:end_rows],colors=None, rainbow=rainbow)
+    final_w, final_h = final_img.size
+
+    frames = []
+
+    for n in range(start_rows, end_rows + 1):
+        img = pattern_func(rows[:n], colors=None, rainbow=rainbow)
+
+        canvas = Image.new("RGBA", (final_w, final_h), (0, 0, 0, 0))
+        canvas.alpha_composite(
+            img,
+            (
+                (final_w - img.width) // 2,
+                (final_h - img.height) // 2,
+            ),
+        )
+
+        if zoomout:
+            img = img.resize(
+                (final_w, final_h),
+                Image.Resampling.LANCZOS,
+            )
+            canvas = img
+
+        if angdur > 0:
+            frame_idx = n - (start_rows - 1)
+            canvas = canvas.rotate(
+                (180.0 / angdur) * frame_idx,
+                expand=False,
+            )
+
+        frames.append(canvas.convert("P", palette=Image.ADAPTIVE))
+
+    durations = [duration] * len(frames)
+    durations[-1] = 500
+
+    frames[0].save(
+        filename,
+        save_all=True,
+        append_images=frames[1:],
+        duration=durations,
+        loop=loop,
+        optimize=False,
+        disposal=2,
+    )
+
+    print(f"Saved GIF to {filename}")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -740,7 +1004,7 @@ def init_state():
 def sidebar():
     st.sidebar.title("⚙️ Controls")
 
-    modes = ["Triangle", "Octagon", "Square", "Hexagon"]
+    modes = ["Triangle", "Octagon", "Square", "Hexagon", "Quadagon", "Pentagon", "Trigon"]
 
     selected_mode = st.sidebar.selectbox(
         "Shape",
@@ -796,7 +1060,7 @@ def sidebar():
     st.session_state.sym = st.sidebar.checkbox("🔄 Symmetric Rule")
 
     mode = st.session_state.mode
-    if mode in ["Triangle", "Octagon"]:
+    if mode in ["Triangle", "Octagon", "Quadagon", "Pentagon", "Trigon"]:
         st.session_state.tri_lines = st.sidebar.slider("Lines", 5, 150, st.session_state.tri_lines, on_change=request_generate)
     elif mode == "Square":
         st.session_state.sq_generations = st.sidebar.slider("Generations", 3, 40, st.session_state.sq_generations, on_change=request_generate)
@@ -817,7 +1081,7 @@ def sidebar():
 
     # Animation settings
     with st.sidebar.expander("🎬 Animation Settings"):
-        if mode in ["Triangle", "Octagon"]:
+        if mode in ["Triangle", "Octagon", "Quadagon", "Pentagon", "Trigon"]:
             st.session_state.anim_start = st.slider("Start Row", 1, 100, min(st.session_state.anim_start, 100), key="anim_start_sl")
             st.session_state.anim_end = st.slider("End Row", 5, 150, max(st.session_state.anim_end, 5), key="anim_end_sl")
         elif mode == "Square":
@@ -831,7 +1095,7 @@ def sidebar():
         st.session_state.anim_duration = st.slider("Frame Duration (ms)", 10, 200, st.session_state.anim_duration, key="anim_dur")
         st.session_state.anim_zoomout = st.checkbox("🔍 Zoom Out", value=st.session_state.anim_zoomout, key="anim_zoom")
 
-        if mode == "Octagon":
+        if mode in["Octagon", "Quadagon", "Pentagon", "Trigon"]:
             st.session_state.oct_angdur = st.slider("Rotation Speed", 0, 100, st.session_state.oct_angdur, key="oct_ang")
 
     st.sidebar.markdown("---")
@@ -898,6 +1162,15 @@ def generate_image():
     elif mode == "Hexagon":
         board = generate_hex(rule_str, st.session_state.hex_generations, bnd, st.session_state.hex_order, rs, wu, sym)
         img = draw_hex(board, colors=colors_rgb, rainbow=rainbow)
+    elif mode == "Quadagon":
+        rows = generate_triangle(rule_str, st.session_state.tri_lines, bnd, rs, wu, sym)
+        img = make_pattern_sq(rows, colors=colors_rgb, rainbow=rainbow)
+    elif mode == "Pentagon":
+        rows = generate_triangle(rule_str, st.session_state.tri_lines, bnd, rs, wu, sym)
+        img = make_pattern_pent(rows, colors=colors_rgb, rainbow=rainbow)
+    elif mode == "Trigon":
+        rows = generate_triangle(rule_str, st.session_state.tri_lines, bnd, rs, wu, sym)
+        img = make_pattern_tri(rows, colors=colors_rgb, rainbow=rainbow)
     else:
         img = None
 
@@ -941,7 +1214,7 @@ def generate_gif():
                            sym=sym, rainbow=rainbow, filename=temp_path, start_rows=start, end_rows=end,
                            duration=dur, loop=0, zoomout=zoom)
         elif mode == "Octagon":
-            animate_gif_oct(rule_str, colors=colors_rgb, boundary=bnd, random_scale=rs, wait_until=wu,
+            animate_gif_pattern(rule_str, pattern_func=make_pattern_octagon,colors=colors_rgb, boundary=bnd, random_scale=rs, wait_until=wu,
                            sym=sym, rainbow=rainbow, filename=temp_path, start_rows=start, end_rows=end,
                            duration=dur, loop=0, zoomout=zoom, angdur=st.session_state.oct_angdur)
         elif mode == "Square":
@@ -952,6 +1225,21 @@ def generate_gif():
             animate_gif_hex(rule_str, colors=colors_rgb, boundary=bnd, order=st.session_state.hex_order,
                            random_scale=rs, wait_until=wu, sym=sym, rainbow=rainbow, filename=temp_path,
                            start_gen=start, end_gen=end, duration=dur, loop=0, zoomout=zoom)
+        elif mode == "Quadagon":
+            animate_gif_pattern(rule_str, pattern_func=make_pattern_sq,colors=colors_rgb, boundary=bnd, random_scale=rs, wait_until=wu,
+                           sym=sym, rainbow=rainbow, filename=temp_path, start_rows=start, end_rows=end,
+                           duration=dur, loop=0, zoomout=zoom, angdur=st.session_state.oct_angdur)
+        elif mode == "Pentagon":
+            animate_gif_pattern(rule_str, pattern_func=make_pattern_pent,colors=colors_rgb, boundary=bnd, random_scale=rs, wait_until=wu,
+                           sym=sym, rainbow=rainbow, filename=temp_path, start_rows=start, end_rows=end,
+                           duration=dur, loop=0, zoomout=zoom, angdur=st.session_state.oct_angdur)
+            file_size = os.stat(temp_path).st_size
+    
+            print(f"File size: {file_size} bytes")
+        elif mode == "Trigon":
+            animate_gif_pattern(rule_str, pattern_func=make_pattern_tri,colors=colors_rgb, boundary=bnd, random_scale=rs, wait_until=wu,
+                           sym=sym, rainbow=rainbow, filename=temp_path, start_rows=start, end_rows=end,
+                           duration=dur, loop=0, zoomout=zoom, angdur=st.session_state.oct_angdur)
 
         st.session_state.last_gif_path = temp_path
         return temp_path
@@ -1094,8 +1382,8 @@ def main_page():
         <style>
         .gif-container {
             background: #1a1a2e;
-            border-radius: 12px;
-            padding: 20px;
+            border-radius: 0px;
+            padding: 0px;
             text-align: center;
         }
         </style>
@@ -1104,72 +1392,6 @@ def main_page():
         st.image(st.session_state.last_gif_path, use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # st.subheader("Smooth Viewer (No Lag)")
-        # frames = []
-        # gif = Image.open(st.session_state.last_gif_path)
-
-        # # Extract all frames
-        # frames = [
-        #     frame.copy().convert("RGBA")
-        #     for frame in ImageSequence.Iterator(gif)
-        # ]
-
-        # # Get GIF FPS from frame duration
-        # duration = gif.info.get("duration", 50)  # milliseconds per frame
-        # fps = 1000 / duration if duration > 0 else 50
-
-        # # encode frames as base64 PNG list
-        # encoded_frames = []
-        # for f in frames:
-        #     buf = io.BytesIO()
-        #     f.save(buf, format="WEBP", lossless=True)
-        #     encoded_frames.append(
-        #         base64.b64encode(buf.getvalue()).decode()
-        #     )
-
-        # html = f"""
-        # <div style="text-align:center;">
-        #     <img id="frame" style="width:100%; max-width:500px;">
-
-        #     <br><br>
-
-        #     <input type="range" min="0" max="{len(encoded_frames)-1}"
-        #         value="0" id="slider" style="width:500px;"/>
-
-        #     <button onclick="playing = !playing;">Play/Pause</button>
-        # </div>
-
-        # <script>
-        #     let frames = {encoded_frames};
-        #     let i = 0;
-        #     let playing = false;
-
-        #     const img = document.getElementById("frame");
-        #     const slider = document.getElementById("slider");
-
-        #     function render(idx) {{
-        #         img.src = "data:image/webp;base64," + frames[idx];
-        #     }}
-
-        #     slider.oninput = (e) => {{
-        #         i = parseInt(e.target.value);
-        #         render(i);
-        #     }}
-
-        #     function loop() {{
-        #         if (playing) {{
-        #             i = (i + 1) % frames.length;
-        #             slider.value = i;
-        #             render(i);
-        #         }}
-        #     }}
-
-        #     setInterval(loop, {50});
-        #     render(0);
-        # </script>
-        # """
-
-        # st.components.v1.html(html, height=650)
 
     elif st.session_state.last_gif_path is None:
         st.info("Generate a pattern first, then create an animation")
@@ -1186,56 +1408,6 @@ def main():
         page_icon="🎨",
         initial_sidebar_state="expanded"
     )
-
-    # Custom CSS
-    
-    # st.markdown("""
-    # <style>
-    # /* Main background */
-    # .main .block-container {
-    #     background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 100%);
-    #     color: #e0e0e0;
-    #     padding-top: 2rem;
-    # }
-    
-    # /* Sidebar */
-    # [data-testid="stSidebar"] {
-    #     background: linear-gradient(180deg, #1e1e3a 0%, #15152a 100%);
-    # }
-    
-    # /* Headers */
-    # h1, h2, h3 {
-    #     color: #ffffff !important;
-    # }
-    
-    # /* Buttons */
-    # .stButton > button {
-    #     font-weight: 500;
-    # }
-    
-    # /* Expander */
-    # .streamlit-expanderHeader {
-    #     color: #b0b0d0 !important;
-    # }
-    
-    # /* Metrics */
-    # [data-testid="stMetric"] {
-    #     background: rgba(255, 255, 255, 0.05);
-    #     border-radius: 8px;
-    #     padding: 10px;
-    # }
-    
-    # /* Selectbox */
-    # .stSelectbox label, .stSlider label, .stCheckbox label {
-    #     color: #c0c0e0 !important;
-    # }
-    
-    # /* Code block */
-    # .stCode {
-    #     background: rgba(0, 0, 0, 0.3) !important;
-    # }
-    # </style>
-    # """, unsafe_allow_html=True)
 
     init_state()
     sidebar()
