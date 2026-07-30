@@ -61,6 +61,172 @@ From those simple rules, intricate fractal-like structures emerge:
 
 > 🤯 **That's it.** No complex algorithms — just color substitution applied recursively. The complexity is *emergent*.
 
+# 🧬 Growth Modes
+
+All growth logic lives in `comp.py`. Every mode shares the same rule engine (`parse_rule`, `apply_rule`) and boundary system — they differ only in **how they seed** and **how they find neighbors**.
+
+---
+
+## 🔺 Triangle — 1D Cellular Automaton
+
+> **Source:** `generate_triangle()` · L52–81
+
+The base engine. Everything else reuses or mimics it.
+
+**How it grows:**
+
+1. Start with a single seed cell: `rows = [[1]]`
+2. Each new row is built from the row above by reading **adjacent pairs**:
+   ```
+   new_row = [edge] + [rule[a, b] for (a, b) in zip(prev, prev[1:])] + [edge]
+   ```
+3. Edge cells are injected (not computed) using the `boundary` parameter
+4. Rows are centered visually to form the triangle shape
+
+**Key parameters:**
+
+| Param | Effect |
+|---|---|
+| `boundary` | `-1` = random edges · `0` = cycling 1→n · else = fixed value |
+| `sym` | Sorts `(a,b)` to `(min,max)` before lookup — makes the rule table symmetric |
+| `random_scale` + `wait_until` | After N rows, randomly injects noise colors with given probability |
+| `rainbow` | Rendering only — shifts hue per row in `draw_triangle` |
+
+**In one sentence:** *Two parents above produce one child below, row by row.*
+
+---
+
+## 🟦 Square — Expanding Diamond with Cross Seeding
+
+> **Source:** `generate_square()` · L83–180 · `generate_square_his()` · L182–275
+
+Square does **not** grow row-by-row. It grows outward by **radius** from a center point.
+
+**How it grows:**
+
+1. **Seed:** Place a single cell at the origin → `board = {(0,0): center}`
+2. **Each generation** increments the radius by 1, then:
+   - **`add_cross()`** — Injects 4 cardinal boundary points at the new radius:
+     ```python
+     board[(0, -r)] = edge   # top
+     board[(0,  r)] = edge   # bottom
+     board[(-r, 0)] = edge   # left
+     board[( r, 0)] = edge   # right
+     ```
+   - **`fill_ring()`** — Iterative closure loop:
+     ```python
+     while changed:
+         for each cell in the ring:
+             neighbors = filled orthogonal neighbors  # up/down/left/right
+             if len(neighbors) == 2:
+                 board[cell] = apply_rule(neighbors[0], neighbors[1])
+                 changed = True
+     ```
+     Keeps looping until no more cells can be filled.
+
+**Why it looks like a diamond:** Only the cross is seeded. Corners fill only when they gain exactly 2 orthogonal neighbors (e.g., left + top), so growth propagates inward from the `+` shape into a filled square.
+
+**In one sentence:** *Seed a cross, then flood-fill inward wherever exactly 2 neighbors exist.*
+
+---
+
+## ⬡ Hexagon — Alternating Crystal Rings
+
+> **Source:** `generate_hex()` · L277–429
+
+The most complex mode. Uses **axial hex coordinates** `(q, r)` and 6-directional neighbors.
+
+**How it grows:**
+
+1. **Coordinate system:** Axial hex grid — 6 neighbors per cell instead of 4
+2. **`hex_ring(radius)`** — Walks the perimeter of the current ring in 6 directions:
+   ```python
+   directions = [(1,0), (0,1), (-1,1), (-1,0), (0,-1), (1,-1)]
+   ```
+3. **`add_outer_points()`** — The crystal seeding trick:
+   - Generates the full ring, then selects **every other point**
+   - The `order` parameter controls the alternation pattern:
+     | `order` | Behavior |
+     |---|---|
+     | `-1` | Randomly picks even or odd indices |
+     | `0` | Alternates by radius parity *(default, most natural)* |
+     | `1` | Always even indices |
+     | `2` | Always odd indices |
+   - Result: only `3×R` points seeded per ring, not `6×R` — half the ring is empty
+4. **`fill_ring()`** — Hex fill with distance-sorted neighbors:
+   ```python
+   touching = [color for nb in 6_neighbors if nb in board]
+   touching.sort(key=hex_distance)  # closest parents first
+   if len(touching) >= 2:           # note: >=2, not ==2
+       board[cell] = apply_rule(touching[0], touching[1])
+   ```
+
+**The elegant trick:** By seeding only every other edge point, the interior is *forced* to be computed from 2 parents — just like triangle, but on a hex lattice. The alternating pattern creates the crystalline look.
+
+**In one sentence:** *Half-seed each ring, then fill gaps from the 2 nearest filled hex neighbors.*
+
+---
+
+## 🔷 Octagon — Triangle in 8-Fold Symmetry
+
+> **Source:** `animate_gif_oct()` · L915–963 · `make_pattern_same()` · L498–552
+
+> [!IMPORTANT]
+> **Octagon is NOT a new growth mode. It is a rendering mode.** The underlying data is identical to Triangle.
+
+**How it works:**
+
+1. **Grow exactly like triangle:**
+   ```python
+   rows = generate_triangle(rule, num_lines, ...)  # same function!
+   ```
+2. **`make_pattern_same()` composites 8 triangles onto one canvas:**
+   - Draw the triangle → `tri`
+   - **Cardinal layer (4 triangles):** Stack `tri` + `tri.rotate(180)` vertically, `tri.rotate(90)` + `tri.rotate(270)` horizontally → 4-way star
+   - **Diagonal layer (4 triangles):** Scale the cross by `1.07×` (LANCZOS), rotate 45°, overlay onto the cardinal layer
+   - **Composite rule:** Only fill pixels where the base is transparent — prevents overwriting
+3. **Why `1.07×` scale?** The diagonal triangles need to be slightly larger to close seam gaps when rotated 45°
+
+**This is why octagon parameters match triangle exactly:** `start_rows`, `end_rows`, `boundary`, `random_scale`, `sym` — because the growth *is* triangle. Only the drawing changes.
+
+**In one sentence:** *Grow a triangle, then stamp it 8 times with rotation to form an octagon.*
+
+---
+
+## 🧩 Shared Core
+
+Every mode uses the same rule engine from `comp.py`:
+
+```python
+def parse_rule(rule_string):
+    n = int(sqrt(len(rule_string)))          # e.g. "213132321" → n=3
+    rules[(a, b)] = int(rule_string[index])  # maps (1,1)..(n,n) → color
+
+def apply_rule(rules, a, b, sym=False):
+    if sym and b > a:
+        a, b = b, a                          # symmetric lookup
+    return rules[(a, b)]
+
+# Boundary logic (identical across all modes):
+if boundary == -1:  edge = random.randint(1, n)
+elif boundary == 0: edge = ((gen - 1) % n) + 1   # cycling
+else:               edge = boundary               # fixed
+```
+
+All modes also respect `random_scale` and `wait_until` for controlled noise injection after N generations.
+
+---
+
+## 📊 Comparison at a Glance
+
+| | 🔺 Triangle | 🟦 Square | ⬡ Hexagon | 🔷 Octagon |
+|---|---|---|---|---|
+| **Data structure** | List of lists | Dict `(x,y)→color` | Dict `(q,r)→color` | List of lists |
+| **Growth direction** | Row by row ↓ | Radius outward ◎ | Ring outward ⬡ | Row by row ↓ |
+| **Seeding** | Edges per row | Cross per radius | Every-other ring point | Edges per row |
+| **Neighbor rule** | 2 from prev row | Exactly 2 orthogonal | ≥2 of 6 hex dirs | 2 from prev row |
+| **Symmetry** | 1× | 4× | 6× | 8× |
+| **Grows its own data?** | ✅ Yes | ✅ Yes | ✅ Yes | ❌ Reuses Triangle |
 ---
 
 ## 🎨 Gallery
