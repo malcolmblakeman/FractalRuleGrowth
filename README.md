@@ -615,9 +615,8 @@ MIT License — use it, fork it, make beautiful things.
 Inspired by:
 - **Cellular automata** (Wolfram's Rule 30, etc.)
 - **Color substitution systems** in generative art
-- **Islamic geometric patterns** and their mathematical foundations
 - The **Sierpinski triangle** as the canonical example of emergent complexity from simple rules
-
+  
 ---
 
 <div align="center">
